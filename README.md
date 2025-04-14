@@ -52,3 +52,19 @@ flowchart TD
     C --> D[TTS Engine - Narration]
     A --> E[Ultrasonic Sensor]
     E --> F[Beep Feedback]
+
+
+## 🙏 Acknowledgements
+This project was developed as part of the 3rd Year Individual Project at the Department of Electrical and Electronic Engineering, University of Manchester.
+
+Supervisor: Dr Leszek Majewski
+
+## 📚 Script Attribution
+EfficientDet Lite Script
+Based on a TensorFlow Lite implementation originally released under the Apache License 2.0.
+See LICENSE-EFFICIENTDET for full terms.
+Original reference: TensorFlow Lite Model Zoo
+
+YOLOv5 Script
+Based on code from the Ultralytics YOLOv5 repository, licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+See LICENSE-YOLOv5 for license terms.
