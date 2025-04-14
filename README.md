@@ -52,7 +52,7 @@ flowchart TD
     C --> D[TTS Engine - Narration]
     A --> E[Ultrasonic Sensor]
     E --> F[Beep Feedback]
-```mermaid
+```
 
 ## 🙏 Acknowledgements
 This project was developed as part of the 3rd Year Individual Project at the Department of Electrical and Electronic Engineering, University of Manchester.
