@@ -40,13 +40,13 @@ GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN)
 
 # Distance thresholds (cm)
-MAX_DISTANCE = 175  # Ignore objects beyond this
-FAST_BEEP = 100  # <100cm = very fast beep
-MEDIUM_BEEP = 120  # <120cm = medium speed beep
-SLOW_BEEP =150 # <150cm = slow beep
+MAX_DISTANCE = 150  # Ignore objects beyond this
+FAST_BEEP = 75  # <10cm = very fast beep
+MEDIUM_BEEP = 100  # <30cm = medium speed beep
+SLOW_BEEP =125 # <60cm = slow beep
 
 def measure_distance():
-    #Measures distance using sensor
+    """Measures distance using sensor"""
     GPIO.output(TRIG, False)
     time.sleep(0.1)
     
@@ -79,7 +79,7 @@ def measure_distance():
     return distance
     
 def beep_controller():
-    #CONTROLS BEEP FREQ BASED ON DIST
+    """CONTROLS BEEP FREQ BASED ON DIST"""
     try:
         while True:
             distance = measure_distance()
@@ -271,7 +271,6 @@ def run(
     if webcam:
         view_img = check_imshow(warn=True)
         dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
-        print("Dataset loaded. Starting loop...")
         bs = len(dataset)
     elif screenshot:
         dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
@@ -283,8 +282,6 @@ def run(
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(device=device), Profile(device=device), Profile(device=device))
     for path, im, im0s, vid_cap, s in dataset:
-        print("Entered loop. Frame grabbed.")
-        frame_start_time  = time.time()
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -316,13 +313,7 @@ def run(
 
         # Define the path for the CSV file
         csv_path = save_dir / "predictions.csv"
-        
-        performance_csv_path = save_dir / "performance.csv"
-        with open(performance_csv_path, "w", newline="") as f_perf:
-            writer = csv.writer(f_perf)
-            writer.writerow(["Frame", "Inference Time (ms)"])
-            
-        
+
         # Create or append to the CSV file
         def write_to_csv(image_name, prediction, confidence):
             """Writes prediction data for an image to a CSV file, appending if the file exists."""
@@ -362,35 +353,35 @@ def run(
                 # Write results
                 
                 objects_detected = []
-                    
+                
                 for *xyxy, conf, cls in reversed(det):
                     c = int(cls)  # integer class
                     label = names[c] if hide_conf else f"{names[c]}"
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
-                        
+                    
                     if label not in objects_detected:
                         objects_detected.append(label)
                         
-                #if objects_detected:
-                  #  unique_objects = list(set(objects_detected))
-                  #  
-                   # if len(unique_objects) == 1: 
-                        #speech_text = f"{unique_objects[0]} detected"
-                   # else:
-                    #    speech_text = f"{' and '.join(', '.join(unique_objects).rsplit(', ', 1))} detected"
+                if objects_detected:
+                    unique_objects = list(set(objects_detected))
                     
-                   # if time.time() - last_spoken_time > MIN_SPEECH_GAP:
-                    #    speak_async(speech_text)    
+                    if len(unique_objects) == 1: 
+                        speech_text = f"{unique_objects[0]} detected"
+                    else:
+                        speech_text = f"{' and '.join(', '.join(unique_objects).rsplit(', ', 1))} detected"
+                    
+                    if time.time() - last_spoken_time > MIN_SPEECH_GAP:
+                        speak_async(speech_text)    
                     
                     
                     # USE TTS 
                     #tts_engine.say(f"Detected {names[c]}")
                     #tts_engine.runAndWait()
                     
-              
-                
-                
+                  
+                    
+                    
                     if save_csv:
                         write_to_csv(p.name, label, confidence_str)
 
@@ -425,14 +416,6 @@ def run(
             # Save results (image with detections)
             if save_img:
                 if dataset.mode == "image":
-                    frame_end_time = time.time()
-                    latency = dt[1].t * 1000
-                    fps_DISP = 1.0/ latency if latency > 0 else 0.0 
-                    fps_text = 'FPS = {:.1f}'.format(fps_DISP)
-                    
-                    
-                    #fps_text = f"FPS: {fps_DISP:.2f}"
-                    cv2.putText(im0, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
                     cv2.imwrite(save_path, im0)
                 else:  # 'video' or 'stream'
                     if vid_path[i] != save_path:  # new video
@@ -443,46 +426,17 @@ def run(
                             fps = vid_cap.get(cv2.CAP_PROP_FPS)
                             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        else:# stream
-                            
-                            frame_end_time = time.time()
-                            latency = dt[1].t * 1e3
-                            fps_DISP = 1.0/ latency if latency > 0 else 0.0 
-                            fps_text = f"FPS: {fps_DISP:.2f}"
-                            cv2.putText(im0, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-                            
+                        else:  # stream
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
                         save_path = str(Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
-                    
                     vid_writer[i].write(im0)
-                    
-                    
-            #from datetime import datetime
-                        #frame_end_time = time.time()
-                        #latency = dt[1].t * 1e3
-                        #fps_DISP = 1.0/ latency if latency > 0 else 0.0 
-                        
-                        #fps_text = f"FPS: {fps_DISP:.2f}"
-                        #cv2.putText(im0, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-            
-            #timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")"""
-            
-            #with open(performance_csv_path, "a", newline="") as f_perf:
-                #writer = csv.writer(f_perf)
-                #writer.writerow([frame, timestamp, f"{latency:.4f}", f"{fps:.2f}"])
-                
-                
+
         # Print time (inference-only)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
 
     # Print results
     t = tuple(x.t / seen * 1e3 for x in dt)  # speeds per image
-    inference_time_ms = dt[1].t * 1e3  # inference time in ms
-    with open(performance_csv_path, "a", newline="") as f_perf:
-        writer = csv.writer(f_perf)
-        writer.writerow([seen, f"{inference_time_ms:.2f}"])
-
     LOGGER.info(f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}" % t)
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ""
